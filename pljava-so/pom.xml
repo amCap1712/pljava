@@ -115,10 +115,6 @@
 						<artifactId>nar-maven-plugin</artifactId>
 						<configuration>
 							<c>
-								<defines combine.children='append'>
-									<!-- Need this for Visual Studio 2013 and Postgresql v9.3 and below -->
-									<define>${MSVC_RINT}</define>
-								</defines>
 								<includePaths combine.children='append'>
 									<includePath>${PGSQL_INCLUDEDIR-SERVER}/port/win32</includePath>
 									<includePath>${PGSQL_INCLUDEDIR-SERVER}/port/win32_msvc</includePath>
@@ -278,13 +274,7 @@
 	<build>
 		<plugins>
 
-			<!-- Several things that could not be done using Maven plugins. This
-				 plugin must be listed FIRST as the pgsql.properties file has to
-				 be written before properties-maven-plugin is called, which can
-				 apparently also only happen in the "initialize" phase.
-				 In addition to generating a bunch of properties based on
-				 pg_config (done by the <ant/> task nested below, which relies
-				 on the external build.xml file), the <script> element given
+			<!-- The <script> element given
 				 directly here is used to properly quote pljava.libjvmdefault
 				 as a new property pljava.qlibjvmdefault in the form of a C
 				 string literal, to be passed to the C compiler in a <define>.
@@ -382,36 +372,22 @@ if ( null !== jvmdflt )
 ]]>
 								</script>
 
-								<!-- Converts pg_config output
-									 to "pgsql.properties" -->
-								<ant>
-									<reference refid='maven.plugin.classpath'/>
-								</ant>
 							</target>
 						</configuration>
 					</execution>
 				</executions>
 			</plugin>
 
-			<!-- Reads the pg_config properties, which were extracted by an Ant task
-				in the "initialize" phase, into Maven variables. As this plugin seems to
-				get ignored in any phase other than "initialize" it must be listed after
-				the Ant task. -->
 			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>properties-maven-plugin</artifactId>
-				<version>1.0.0</version>
+				<groupId>org.postgresql</groupId>
+				<artifactId>pljava-pgxs</artifactId>
+				<version>0.0.1-SNAPSHOT</version>
 				<executions>
 					<execution>
 						<phase>initialize</phase>
 						<goals>
-							<goal>read-project-properties</goal>
+							<goal>properties</goal>
 						</goals>
-						<configuration>
-							<files>
-								<file>${basedir}/target/pgsql.properties</file>
-							</files>
-						</configuration>
 					</execution>
 				</executions>
 			</plugin>
