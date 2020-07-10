@@ -11,25 +11,33 @@
  */
 package org.postgresql;
 
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.project.MavenProject;
 
-import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Mojo(name = "properties", defaultPhase = LifecyclePhase.INITIALIZE)
 public class PropertiesMojo extends AbstractMojo
 {
-	@Parameter(defaultValue = "${project}", required = true, readonly = true)
-	MavenProject project;
+	static Pattern mustBeQuotedForC = Pattern.compile(
+			"([\"\\\\]|(?<=\\?)\\?(?=[=(/)'<!>-]))|" +  // (just insert backslash)
+					"([\\a\b\\f\\n\\r\\t\\x0B])|" +     // (use specific escapes)
+					"(\\p{Cc}((?=\\p{XDigit}))?)"
+			// use hex, note whether an XDigit follows
+	);
+
+	@Parameter(defaultValue = "${session}", required = true, readonly = true)
+	MavenSession session;
 
 	@Parameter(defaultValue = "${project.build.directory}", required = true)
 	private File targetDirectory;
@@ -39,49 +47,51 @@ public class PropertiesMojo extends AbstractMojo
 			"--includedir", "PGSQL_INCLUDEDIR-SERVER", "--includedir-server",
 			"PGSQL_VER_CLASSIFIER", "--version");
 
+	private String pgConfigCommand;
+
+	public static String getStringFromBytes (byte[] bytes)
+			throws CharacterCodingException
+	{
+		return Charset.defaultCharset().newDecoder()
+				.decode(ByteBuffer.wrap(bytes)).toString();
+	}
+
 	@Override
 	public void execute ()
 	{
 		try
 		{
-			StringBuilder propertiesDataBuilder = new StringBuilder();
-			propertiesDataBuilder.append("# ")
-					.append(LocalDateTime.now()
-							.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-					.append(System.getProperty("line.separator"));
+			setLibJvmDefault();
+			pgConfigCommand = session.getCurrentProject()
+					.getProperties().getProperty("pgsql.pgconfig");
 
 			for (Map.Entry<String, String> entry : pgConfigProperties.entrySet())
 			{
 				String propertyValue = getPgConfigProperty(entry.getValue());
-				getLog().warn(propertyValue);
 				if (entry.getKey().equalsIgnoreCase("PGSQL_VER_CLASSIFIER"))
+				{
 					propertyValue = propertyValue
 							.replaceAll("devel.*|alpha.*|beta.*|rc.*$", "\\.99")
 							.replaceAll("^[^\\d]*+(\\d++)\\.(\\d++)(?:\\." +
 									"(\\d++))?.*$", "pg$1.$2");
 
-				project.getProperties().setProperty(entry.getKey(),
-						propertyValue);
+					String finalPropertyValue = propertyValue;
+					session.getAllProjects()
+							.stream()
+							.filter(project -> project.getArtifactId()
+									.contains("packaging"))
+							.forEach(project -> project.getProperties()
+									.setProperty(entry.getKey(),
+											finalPropertyValue));
+				} else
+				{
+					session.getCurrentProject().getProperties()
+							.setProperty(entry.getKey(), propertyValue);
+				}
 
-				getLog().debug("PGXS Property Set: "
-						+ entry.getKey() + "=" + propertyValue + "\n");
-
-				propertiesDataBuilder.append(entry.getKey())
-						.append("=")
-						.append(propertyValue)
-						.append("\n");
+				getLog().info("PGXS Property Set: "
+						+ entry.getKey() + "=" + propertyValue);
 			}
-
-			File propertiesFile = new File(targetDirectory.getAbsolutePath() +
-					File.separator + "pgxs.properties");
-			getLog().info(propertiesFile.getAbsolutePath());
-			if (!propertiesFile.exists())
-				propertiesFile.createNewFile();
-			FileWriter writer = new FileWriter(propertiesFile);
-			writer.write(propertiesDataBuilder.toString());
-			writer.flush();
-			writer.close();
-
 		} catch (Exception e)
 		{
 			getLog().error(e);
@@ -91,13 +101,78 @@ public class PropertiesMojo extends AbstractMojo
 	private String getPgConfigProperty (String pgConfigArgument)
 			throws IOException, InterruptedException
 	{
-		Process process = new ProcessBuilder("pg_config",
-				pgConfigArgument).start();
-		getLog().warn(process.info().toString());
-		BufferedInputStream inputStream =
-				new BufferedInputStream(process.getInputStream());
-		byte[] bytes = inputStream.readAllBytes();
+		ProcessBuilder processBuilder = new ProcessBuilder(pgConfigCommand,
+				pgConfigArgument);
+		processBuilder.redirectError(ProcessBuilder.Redirect.INHERIT);
+		Process process = processBuilder.start();
+		process.getOutputStream().close();
+		byte[] bytes = process.getInputStream().readAllBytes();
 		process.waitFor();
-		return new String(bytes).trim();
+		if (process.exitValue() != 0)
+			throw new InterruptedException("pg_config process failed and " +
+					"exited with " + process.exitValue());
+		String pgConfigOutput = getStringFromBytes(bytes);
+		return pgConfigOutput.substring(0, pgConfigOutput.length() - 1);
+	}
+
+	private void setLibJvmDefault ()
+	{
+		String jvmdflt = System.getProperty("pljava.libjvmdefault");
+		if (null != jvmdflt)
+		{
+			String jvmdfltQuoted = quoteStringForC(jvmdflt);
+			session.getCurrentProject().getProperties()
+					.setProperty("pljava.qlibjvmdefault", jvmdfltQuoted);
+		}
+	}
+
+	/* This is the function that will return s wrapped in double quotes and with
+	   internal characters escaped where appropriate using the C conventions.
+	 */
+	private String quoteStringForC (String s)
+	{
+		Matcher m = mustBeQuotedForC.matcher(s);
+		StringBuffer b = new StringBuffer();
+		while (m.find())
+		{
+			if (-1 != m.start(1)) // things that just need a backslash
+				m.appendReplacement(b, "\\\\$1");
+			else if (-1 != m.start(2)) // things with specific escapes
+			{
+				char ec = 0;
+				switch (m.group(2)) // switch/case uses ===
+				{
+					case "\u0007":
+						ec = 'a';
+						break;
+					case "\b":
+						ec = 'b';
+						break;
+					case "\f":
+						ec = 'f';
+						break;
+					case "\n":
+						ec = 'n';
+						break;
+					case "\r":
+						ec = 'r';
+						break;
+					case "\t":
+						ec = 't';
+						break;
+					case "\u000B":
+						ec = 'v';
+						break;
+				}
+				m.appendReplacement(b, "\\\\" + ec);
+			} else // it's group 3, use hex escaping
+			{
+				m.appendReplacement(b,
+						"\\\\x" + Integer.toHexString(
+								m.group(3).codePointAt(0)) +
+								(-1 == m.start(4) ? "" : "\"\"")); // XDigit follows?
+			}
+		}
+		return "\"" + m.appendTail(b) + "\"";
 	}
 }

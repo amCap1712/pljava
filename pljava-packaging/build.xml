@@ -19,8 +19,6 @@
 	        </filterchain>
         </loadresource>
 
-		<loadproperties srcFile="../pljava-so/target/pgxs.properties"/>
-
 		<property name="suffix" value="${PGSQL_VER_CLASSIFIER}-${naraol}"/>
 	</target>
 
