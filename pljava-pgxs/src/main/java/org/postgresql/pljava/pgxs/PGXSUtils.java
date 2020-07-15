@@ -105,7 +105,8 @@ public final class PGXSUtils
 			throw new InterruptedException("pg_config process failed and " +
 				                               "exited with " + exitCode);
 		String pgConfigOutput = defaultCharsetDecodeStrict(bytes);
-		return pgConfigOutput.substring(0, pgConfigOutput.length() - 1);
+		return pgConfigOutput.substring(0,
+			pgConfigOutput.length() - System.lineSeparator().length());
 	}
 
 }

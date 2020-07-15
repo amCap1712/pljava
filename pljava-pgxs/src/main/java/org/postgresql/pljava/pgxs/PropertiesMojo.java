@@ -27,7 +27,8 @@ public class PropertiesMojo extends AbstractMojo
 
 	private Map<String, String> pgConfigProperties = Map.of("PGSQL_BINDIR",
 		"--bindir", "PGSQL_LIBDIR", "--libdir", "PGSQL_INCLUDEDIR",
-		"--includedir", "PGSQL_INCLUDEDIR-SERVER", "--includedir-server");
+		"--includedir", "PGSQL_INCLUDEDIR-SERVER", "--includedir-server",
+		"PGSQL_PKGLIBDIR", "--pkglibdir");
 
 	private String pgConfigCommand;
 

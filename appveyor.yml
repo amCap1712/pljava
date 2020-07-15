@@ -5,14 +5,17 @@ environment:
   PGUSER: postgres
   PGPASSWORD: Password12!
   matrix:
+    - SYS: MSVC
+      JDK: 14
+      PG: 9.6
+    - SYS: MINGW
+      JDK: 14
+      PG: 12
     - SYS: MINGW
       JDK: 9
       PG: 12
     - SYS: MINGW
       JDK: 10
-      PG: 12
-    - SYS: MINGW
-      JDK: 14
       PG: 12
     - SYS: MINGW
       JDK: 13
@@ -47,9 +50,6 @@ environment:
     - SYS: MSVC
       JDK: 14
       PG: 10
-    - SYS: MSVC
-      JDK: 14
-      PG: 9
 before_build:
   - ps: .appveyor/./appveyor_download_java.ps1
   - set JAVA_HOME=%ProgramFiles%\Java\jdk%JDK%
