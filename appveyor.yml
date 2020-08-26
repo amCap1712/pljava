@@ -66,13 +66,13 @@ build_script:
   - IF %SYS%==MINGW (
     C:\msys64\usr\bin\env MSYSTEM=MINGW64 C:\msys64\usr\bin\bash -l -c "/c/projects/pljava/.appveyor/appveyor_mingw.sh %JDK%")
     ELSE (
-    mvn clean install -Dnar.cores=1 -Psaxon-examples --batch-mode -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+    mvn clean install -Psaxon-examples --batch-mode -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
     )
 #  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 before_test:
   - ps: $libjvm = "$Env:JAVA_HOME\bin\server\jvm.dll"
   - ps: $vmoptions= "-enableassertions:org.postgresql.pljava... -Xcheck:jni"
-  - ps: Get-ChildItem -Recurse -Path pljava-packaging -Filter pljava-pg*.jar | %{java -jar $_.fullName}
+  - ps: Get-ChildItem -Recurse -Path pljava-packaging -Filter pljava*.jar | %{java -jar $_.fullName}
   - ps: psql -c "SET pljava.libjvm_location to '$libjvm'; ALTER USER postgres SET pljava.libjvm_location to '$libjvm'; SELECT pg_reload_conf();" -U postgres
   - ps: psql -c "SET pljava.vmoptions  to '$vmoptions'; ALTER USER postgres SET pljava.vmoptions  to '$vmoptions'; SELECT pg_reload_conf();" -U postgres
   - ps: psql -c "CREATE EXTENSION pljava;" -U postgres

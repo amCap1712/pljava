@@ -9,9 +9,9 @@ echo $libjvm_path
 vmoptions='-enableassertions:org.postgresql.pljava... -Xcheck:jni'
 
 if [ "$POSTGRESQL_VERSION" = "SOURCE" ]; then
-    find pljava-packaging -name "pljava-pg*.jar" | sudo xargs java -jar -Dpgconfig="/usr/local/pgsql/bin/pg_config"
+    find pljava-packaging -name "pljava*.jar" | sudo xargs java -jar -Dpgconfig="/usr/local/pgsql/bin/pg_config"
 else
-    find pljava-packaging -name "pljava-pg*.jar" | sudo xargs java -jar
+    find pljava-packaging -name "pljava*.jar" | sudo xargs java -jar
 fi
 
 if [ "$TRAVIS_OS_NAME" = "osx" ]; then
