@@ -63,12 +63,12 @@ before_build:
   - ps: $Env:PGDATA = "$Env:PGROOT\data"
   - ps: Start-Process -FilePath "$Env:PGROOT\bin\pg_ctl.exe" -ArgumentList "start" -RedirectStandardError "error.txt"
 build_script:
+#  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
   - IF %SYS%==MINGW (
     C:\msys64\usr\bin\env MSYSTEM=MINGW64 C:\msys64\usr\bin\bash -l -c "/c/projects/pljava/.appveyor/appveyor_mingw.sh %JDK%")
     ELSE (
     mvn clean install -Psaxon-examples --batch-mode -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
     )
-#  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 before_test:
   - ps: $libjvm = "$Env:JAVA_HOME\bin\server\jvm.dll"
   - ps: $vmoptions= "-enableassertions:org.postgresql.pljava... -Xcheck:jni"
