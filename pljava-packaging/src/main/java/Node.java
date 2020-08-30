@@ -15,97 +15,40 @@ package org.postgresql.pljava.packaging;
 
 import org.gjt.cuspy.JarX;
 
-import java.io.InputStream;
-
-import static java.lang.System.getProperty;
-import static java.lang.System.setProperty;
-
-import java.nio.ByteBuffer;
-import static java.nio.charset.Charset.defaultCharset;
-
-import java.util.regex.Matcher;
-import static java.util.regex.Pattern.compile;
-
-/*
- * For "Node" behavior:
- */
-
-import static java.lang.ProcessBuilder.Redirect.INHERIT;
-import java.lang.reflect.InvocationHandler; // flexible SAM allowing exceptions
-import static java.lang.Thread.interrupted;
-
-import static java.net.InetAddress.getLoopbackAddress;
-import static java.net.URLEncoder.encode;
-import java.net.ServerSocket;
-
-import static java.nio.charset.StandardCharsets.US_ASCII;
-
-import static java.nio.file.Files.createTempFile;
-import static java.nio.file.Files.createTempDirectory;
-import static java.nio.file.Files.deleteIfExists;
-import static java.nio.file.Files.exists;
-import static java.nio.file.Files.getLastModifiedTime;
-import static java.nio.file.Files.lines;
-import static java.nio.file.Files.walk;
-import static java.nio.file.Files.write;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import static java.nio.file.StandardWatchEventKinds.*;
-import java.nio.file.WatchEvent;
-import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
-
-import java.nio.file.AccessDeniedException;
-import java.nio.file.NoSuchFileException;
-
-import java.sql.Connection;
-import static java.sql.DriverManager.getConnection;
-import java.sql.ParameterMetaData;
-import java.sql.PreparedStatement;
-import java.sql.Statement;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.Types;
-
-import java.sql.SQLException;
-import java.sql.SQLWarning;
-
+import javax.sql.rowset.RowSetMetaDataImpl;
 import javax.sql.rowset.RowSetProvider;
 import javax.sql.rowset.WebRowSet;
-import javax.sql.rowset.RowSetMetaDataImpl;
-
-import java.util.ArrayDeque;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
-import java.util.Objects;
-import static java.util.Objects.requireNonNull;
-import java.util.Properties;
-import java.util.Random;
-import java.util.Spliterator;
-import static java.util.Spliterator.IMMUTABLE;
-import static java.util.Spliterator.NONNULL;
-import static java.util.Spliterator.ORDERED;
-import static java.util.Spliterators.spliteratorUnknownSize;
-
-import java.util.concurrent.Callable; // like a Supplier but allows exceptions!
+import java.io.InputStream;
+import java.lang.reflect.InvocationHandler;
+import java.net.ServerSocket;
+import java.nio.ByteBuffer;
+import java.nio.file.*;
+import java.sql.*;
+import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-
-import java.util.function.BooleanSupplier;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
-
+import java.util.function.*;
 import java.util.jar.JarFile;
-
+import java.util.regex.Matcher;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+
+import static java.lang.ProcessBuilder.Redirect.INHERIT;
+import static java.lang.System.getProperty;
+import static java.lang.System.setProperty;
+import static java.lang.Thread.interrupted;
+import static java.net.InetAddress.getLoopbackAddress;
+import static java.net.URLEncoder.encode;
+import static java.nio.charset.Charset.defaultCharset;
+import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.file.Files.*;
+import static java.nio.file.StandardWatchEventKinds.*;
+import static java.sql.DriverManager.getConnection;
+import static java.util.Objects.requireNonNull;
+import static java.util.Spliterator.*;
+import static java.util.Spliterators.spliteratorUnknownSize;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.regex.Pattern.compile;
 import static java.util.stream.StreamSupport.stream;
 
 /**
@@ -2422,6 +2365,11 @@ public class Node extends JarX {
 	 *   -c for options, which will be rewritten as -o values for pg_ctl.
 	 */
 
+	/*
+	 * The same method is duplicated in pljava-pgxs/PGXSUtils.java . While making
+	 * changes to this method, review the other occurrence also and replicate the
+	 * changes there if desirable.
+	 */
 	/**
 	 * Adjust the command arguments of a {@code ProcessBuilder} so that they
 	 * will be recovered correctly on Windows by a target C/C++ program using
