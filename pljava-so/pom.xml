@@ -152,6 +152,51 @@
 		},
 
 		{
+			name : "Windows MinGW with MSVC PostgreSQL",
+
+			object_extension : ".o",
+
+			probe: function(os_name) {
+				return os_name.toLowerCase().contains("windows")
+					&& java.lang.System.getenv().containsKey("MSYSTEM")
+					&& java.lang.System.getenv().get("MSYSTEM").equalsIgnoreCase("MINGW64")
+					&& getPgConfigProperty("--cc").equals("not recorded");
+			},
+
+			compile : function(cc, files, output_dir, includes, defines, flags) {
+				includes.add(java_include.resolve("win32").toString());
+				includes.add(Paths.get(includedir_server, "port", "win32").toString());
+				includes.add(resolve(pljava_include,
+					Paths.get("fallback", "win32")).toString());
+				defines.put("Windows", null);
+
+				var compileProcess = utils.processBuilder(function(l) {
+					l.add("gcc");
+					l.addAll(pgxs.formatDefines(defines));
+					l.addAll(pgxs.formatIncludes(includes));
+					l.add("-c");
+					l.addAll(files);
+				});
+				compileProcess.directory(output_dir.toFile());
+				return runCommand(utils.forWindowsCRuntime(compileProcess));
+			},
+
+			link : function(cc, flags, files, target_path) {
+				flags.addAll(of("-Wl,--export-all-symbols","-shared-libgcc"));
+				var linkingProcess = utils.processBuilder(function(l) {
+					l.add("gcc");
+					l.addAll(of("-shared", "-o", library_name + ".dll"));
+					l.addAll(files);
+
+					// From compiler-mingw64 profile
+					l.addAll(of("-L" + pkglibdir, "-Bdynamic", "-lpostgres"));
+				});
+				linkingProcess.directory(target_path.toFile());
+				return runCommand(utils.forWindowsCRuntime(linkingProcess));
+			}
+		},
+
+		{
 			name : "Windows MinGW",
 
 			object_extension : ".o",
