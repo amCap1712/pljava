@@ -57,8 +57,8 @@ before_build:
   - ps: $Env:JAVA_HOME = "C:\Program Files\Java\jdk$Env:JDK"
   - ps: $Env:Path = "$Env:JAVA_HOME\bin;" + $Env:Path
 build_script:
+  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
   - .appveyor\appveyor_mingw_or_msvc.bat
-#  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 test_script:
   - ps: |
       $pgConfig = $Env:pgConfig
