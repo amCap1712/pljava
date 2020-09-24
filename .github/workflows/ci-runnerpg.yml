@@ -24,10 +24,10 @@ jobs:
             cc: gcc
           - os: macos-latest
             cc: clang
-#         - os: windows-latest
-#           cc: msvc
-#         - os: windows-latest
-#           cc: mingw
+          - os: windows-latest
+            cc: msvc
+          - os: windows-latest
+            cc: mingw
         java: [9, 11] # , 12, 14, 15-ea]
 
     steps:
